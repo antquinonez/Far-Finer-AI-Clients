@@ -56,9 +56,9 @@ ai = Anthropic(config, use_max_model=True)
 ```
 ## AIs Implemented
 
-* Anthropic -- Separate ones for the
-- Basic & Max models -- Anthropic.py
-- Caching of system instructions -- AnthropicCached.py
+### Anthropic -- Separate ones for the
+-  Basic & Max models -- Anthropic.py
+-  Caching of system instructions -- AnthropicCached.py
 
 ### Coming soon:
 * OpenAI -- Assistant API
