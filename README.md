@@ -47,7 +47,7 @@ Example:
 ```python
 config = {
     "api_key": "YOUR_API_KEY",
-    "model": "gpt-3.5-turbo",
+    "model": "claude-3-5-sonnet-20240620",
     "temperature": 0.5,
     "max_tokens": 100
 }
