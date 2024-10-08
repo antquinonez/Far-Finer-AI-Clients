@@ -4,12 +4,12 @@
 import os
 import time
 from typing import Optional, List
-from anthropic import Anthropic as AnthropicClient
+from anthropic import Anthropic
 from dotenv import load_dotenv
 
 load_dotenv()
 
-class AnthropicCached:
+class FFAnthropicCached:
     def __init__(self, config: Optional[dict] = None, **kwargs):
         # DEFAULT VALUES
         default_model = "claude-3-5-sonnet-20240620"
@@ -36,13 +36,13 @@ class AnthropicCached:
         self.system_instructions = config.get('system_instructions', default_instructions) if config else os.getenv('ANTHROPIC_ASSISTANT_INSTRUCTIONS', default_instructions)
         self.conversation_history = ConversationHistory()
              
-        self.client: AnthropicClient = self._initialize_client()
+        self.client: Anthropic = self._initialize_client()
     
-    def _initialize_client(self) -> AnthropicClient:
+    def _initialize_client(self) -> Anthropic:
         api_key = self.api_key
         if not api_key:
             raise ValueError("API key not found")
-        return AnthropicClient(api_key=api_key)
+        return Anthropic(api_key=api_key)
 
     def generate_response(self, prompt: str) -> str:
         try: 
