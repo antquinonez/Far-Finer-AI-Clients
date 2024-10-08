@@ -61,7 +61,7 @@ ai = FFAnthropic(config, use_max_model=True)
 -  Caching of system instructions -- FFAnthropicCached.py
 
 ### Coming soon:
-* OpenAI -- Assistant API
-* Perplexity
-* Gemini
-* Dictionaries to hold prompts and responses.
+- OpenAI -- Assistant API
+- Perplexity
+- Gemini
+- Dictionaries to hold prompts and responses.
