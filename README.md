@@ -52,13 +52,13 @@ config = {
     "max_tokens": 100
 }
 
-ai = Anthropic(config, use_max_model=True)
+ai = FFAnthropic(config, use_max_model=True)
 ```
 ## AIs Implemented
 
 ### Anthropic -- Separate ones for the
--  Basic & Max models -- Anthropic.py
--  Caching of system instructions -- AnthropicCached.py
+-  Basic & Max models -- FFAnthropic.py
+-  Caching of system instructions -- FFAnthropicCached.py
 
 ### Coming soon:
 * OpenAI -- Assistant API
