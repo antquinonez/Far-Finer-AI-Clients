@@ -1,7 +1,7 @@
 # Copyright (c) 2024 Antonio Quinonez
 # Licensed under the MIT License. See LICENSE in the project root for license information.
 
-from lib.AnthropicCached import AnthropicCached
+from lib.AI.FFAnthropicCached import FFAnthropicCached
 
 def main():
     config = {
@@ -11,7 +11,7 @@ def main():
     }
 
     # Create an instance of the class
-    ai = AnthropicCached(config, model="claude-3-5-sonnet-20240620")
+    ai = FFAnthropicCached(config, model="claude-3-5-sonnet-20240620")
 
     print("AI initialized. Type 'exit' to quit.")
 

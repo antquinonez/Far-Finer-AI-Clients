@@ -1,7 +1,7 @@
 # Copyright (c) 2024 Antonio Quinonez
 # Licensed under the MIT License. See LICENSE in the project root for license information.
 
-from lib.Anthropic import Anthropic
+from lib.AI.FFAnthropic import FFAnthropic
 
 def main():
 
@@ -12,7 +12,7 @@ def main():
 
 
     # Create an instance of the ChatGPT class
-    ai = Anthropic(config, use_max_model=True)
+    ai = FFAnthropic(config, use_max_model=True)
 
     print("AI initialized. Type 'exit' to quit.")
 
