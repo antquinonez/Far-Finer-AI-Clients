@@ -53,6 +53,7 @@ config = {
 }
 
 ai = Anthropic(config, use_max_model=True)
+```
 ## AIs Implemented
 
 * Anthropic -- Separate ones for the
