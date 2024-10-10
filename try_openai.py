@@ -1,11 +1,11 @@
 # Copyright (c) 2024 Antonio Quinonez
 # Licensed under the MIT License. See LICENSE in the project root for license information.
 
-from lib.AI.AIGPT import AIGPT
+from lib.AI.FFOpenAI import FFOpenAI
 
 def main():
     # Create an instance of the ChatGPT class
-    chatgpt = AIGPT()
+    ai = FFOpenAI()
 
     print("ChatGPT Assistant initialized. Type 'exit' to quit.")
 
@@ -20,7 +20,7 @@ def main():
 
         try:
             # Generate a response
-            response = chatgpt.generate_response(user_input)
+            response = ai.generate_response(user_input)
             print("Assistant:", response)
         except Exception as e:
             print(f"An error occurred: {str(e)}")

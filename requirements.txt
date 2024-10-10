@@ -1,2 +1,4 @@
 anthropic
+openai
+configparser
 python-dotenv
