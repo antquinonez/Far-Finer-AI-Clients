@@ -15,7 +15,7 @@ This is alpha software. Use at your own risk. Watch those tokens!
 2. `FFAnthropicCached`: Caching of system instructions
 
 ### OpenAI:
-- `FFopenAI`: Uses the OpenAI Assistant API. See: https://platform.openai.com/docs/assistants/overview
+- `FFOpenAI`: Uses the OpenAI Assistant API. See: https://platform.openai.com/docs/assistants/overview
 
 ## Installation
 
