@@ -3,12 +3,13 @@
 
 from lib.AI.FFGemini import FFGemini
 import logging
+import asyncio
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def main():
+async def main():
     logger.info("Starting Gemini command-line interface")
     
     try:
@@ -34,7 +35,7 @@ def main():
         try:
             # Generate a response
             logger.debug("Generating response for user input: %s", user_input)
-            response = ai.generate_response(user_input)
+            response = await ai.generate_response(user_input)
             print("Assistant:", response)
             logger.info("Response generated and displayed to user")
         except Exception as e:
@@ -42,4 +43,4 @@ def main():
             print(f"An error occurred: {str(e)}")
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

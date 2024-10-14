@@ -4,10 +4,11 @@
 import os
 import logging
 import subprocess
+import asyncio
 from typing import Optional, List
 from google.auth.transport import requests
 from google.oauth2 import credentials
-from openai import OpenAI
+from openai import AsyncOpenAI
 import google.auth
 
 # Configure logging
@@ -53,7 +54,7 @@ class FFGemini:
         self.refresh_token_if_needed()
 
         self.chat_history: List[dict] = []
-        self.client: OpenAI = self._initialize_client()
+        self.client: AsyncOpenAI = self._initialize_client()
         self._response_generated = False
 
     def refresh_token_if_needed(self):
@@ -67,10 +68,10 @@ class FFGemini:
                 logger.error("Token is invalid and cannot be refreshed")
                 raise ValueError("Invalid token that cannot be refreshed")
 
-    def _initialize_client(self) -> OpenAI:
-        """Initialize and return the OpenAI client."""
+    def _initialize_client(self) -> AsyncOpenAI:
+        """Initialize and return the AsyncOpenAI client."""
         self.refresh_token_if_needed()  # Ensure token is valid before creating client
-        return OpenAI(
+        return AsyncOpenAI(
             base_url=f'https://us-central1-aiplatform.googleapis.com/v1beta1/projects/{self.project}/locations/{self._get_region()}/endpoints/openapi',
             api_key=self.creds.token
         )
@@ -95,7 +96,7 @@ class FFGemini:
             logger.error(f"Error determining Google Cloud region using gcloud: {str(e)}")
             raise ValueError(f"Error determining Google Cloud region using gcloud: {str(e)}")
 
-    def generate_response(self, prompt: str) -> str:
+    async def generate_response(self, prompt: str) -> str:
         logger.debug(f"Generating response for prompt: {prompt}")
 
         if not prompt.strip():
@@ -118,18 +119,34 @@ class FFGemini:
 
         logger.debug(f"Messages for API call: {messages}")
 
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature
-        )
+        try:
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                max_tokens=self.max_tokens,
+                temperature=self.temperature
+            )
+            
+            logger.debug(f"Full API response: {response}")
+            
+            # Add a small delay to ensure response is fully processed
+            await asyncio.sleep(0.1)
+            
+            if response.choices and response.choices[0].message and response.choices[0].message.content:
+                content = response.choices[0].message.content
+                self.chat_history.append({"role": "assistant", "content": content})
+                self._response_generated = True
+                logger.info("Response generated successfully")
+                return content
+            else:
+                logger.error("Unexpected response structure from API")
+                raise ValueError("Unexpected response structure from API")
+        except Exception as e:
+            logger.error(f"Error generating response: {str(e)}")
+            raise
 
-        self.chat_history.append({"role": "assistant", "content": response.choices[0].message.content})
-        self._response_generated = True
-
-        logger.info("Response generated successfully")
-        return response.choices[0].message.content
+    def generate_response_sync(self, prompt: str) -> str:
+        return asyncio.run(self.generate_response(prompt))
 
     def clear_conversation(self):
         self.chat_history = []
