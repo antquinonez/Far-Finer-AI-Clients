@@ -3,14 +3,20 @@
 
 import os
 import time
+import logging
 from typing import Optional, List
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
 load_dotenv()
 
+# Configure logging
+logger = logging.getLogger(__name__)
+
 class FFAnthropicCached:
     def __init__(self, config: Optional[dict] = None, **kwargs):
+        logger.info("Initializing FFAnthropicCached")
+
         # DEFAULT VALUES
         default_model = "claude-3-5-sonnet-20240620"
         default_max_tokens = 2000       
@@ -37,19 +43,26 @@ class FFAnthropicCached:
         self.conversation_history = ConversationHistory()
              
         self.client: Anthropic = self._initialize_client()
+
+        logger.debug(f"Model: {self.model}, Temperature: {self.temperature}, Max Tokens: {self.max_tokens}")
+        logger.debug(f"System instructions: {self.system_instructions}")
     
     def _initialize_client(self) -> Anthropic:
+        logger.info("Initializing Anthropic client")
         api_key = self.api_key
         if not api_key:
+            logger.error("API key not found")
             raise ValueError("API key not found")
         return Anthropic(api_key=api_key)
 
     def generate_response(self, prompt: str) -> str:
+        logger.debug(f"Generating response for prompt: {prompt}")
         try: 
             self.conversation_history.add_turn_user(prompt)
 
             turns = self.conversation_history.get_turns()
             if not turns:
+                logger.error("Conversation history is empty")
                 raise ValueError("Conversation history is empty")
 
             response = self.client.messages.create(
@@ -68,14 +81,21 @@ class FFAnthropicCached:
             assistant_response = response.content[0].text
             self.conversation_history.add_turn_assistant(assistant_response)
             
+            logger.info("Response generated successfully")
             return assistant_response
         except Exception as e:
-            print("problem with response generation")
-            print("  -- model: ", self.model)
-            print("  -- system: ", self.system_instructions)
+            logger.error("Problem with response generation")
+            logger.error(f"  -- exception: {str(e)}")
+            logger.error(f"  -- model: {self.model}")
+            logger.error(f"  -- system: {self.system_instructions}")
+            logger.error(f"  -- conversation history: {self.conversation_history.get_turns()}")
+            logger.error(f"  -- max_tokens: {self.max_tokens}")
+            logger.error(f"  -- temperature: {self.temperature}")
+            
             raise RuntimeError(f"Error generating response from Claude: {str(e)}")
 
     def clear_conversation(self):
+        logger.info("Clearing conversation history")
         self.conversation_history = ConversationHistory()
 
 class ConversationHistory:
