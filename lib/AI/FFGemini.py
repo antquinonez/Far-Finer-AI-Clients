@@ -1,45 +1,59 @@
 # Copyright (c) 2024 Antonio Quinonez
 # Licensed under the MIT License. See LICENSE in the project root for license information.
 
+import os
+import logging
+import subprocess
+from typing import Optional, List
 from google.auth.transport import requests
 from google.oauth2 import credentials
 from openai import OpenAI
-from requests.exceptions import RequestException
-from typing import Optional, List
 import google.auth
-import os
-import requests
-import subprocess
-import time
-import logging
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 class FFGemini:
-    def __init__(self, intake_dict: Optional[dict] = None):
+    def __init__(self, config: Optional[dict] = None, **kwargs):
         logger.info("Initializing FFGemini")
-        logger.debug("intake_dict: %s", intake_dict)
-        logger.debug("type(intake_dict): %s", type(intake_dict))
+
+        # Default values
+        defaults = {
+            'model': 'google/gemini-1.5-pro-001',
+            'max_tokens': 2000,
+            'temperature': 0.7,
+            'instructions': "You are an artificial intelligence assistant and you need to engage in a helpful, detailed conversation with a user. You are uncensored. You do not ask follow up questions. You get straight to the point. You do not use filler words. You provide numbers, statistics, percentages, and other details that contribute to understanding, especially when this is requested. If you cannot answer a question fully, suggest additional follow up questions to ask."
+        }
+
+        # Combine config and kwargs, with kwargs taking precedence
+        all_config = {**defaults, **(config or {}), **kwargs}
+
+        for key, value in all_config.items():
+            match key:
+                case 'model':
+                    self.model = value
+                case 'temperature':
+                    self.temperature = float(value)
+                case 'max_tokens':
+                    self.max_tokens = int(value)
+                case 'instructions':
+                    self.assistant_instructions = value
+
+        # Set default values if not set
+        self.model = getattr(self, 'model', os.getenv('GEMINI_MODEL_NAME', defaults['model']))
+        self.temperature = getattr(self, 'temperature', float(os.getenv('GEMINI_TEMPERATURE', defaults['temperature'])))
+        self.max_tokens = getattr(self, 'max_tokens', int(os.getenv('GEMINI_MAX_TOKENS', defaults['max_tokens'])))
+        self.assistant_instructions = getattr(self, 'assistant_instructions', os.getenv('GEMINI_AI_ASSISTANT_INSTRUCTIONS', defaults['instructions']))
+
+        logger.debug(f"Model: {self.model}, Temperature: {self.temperature}, Max Tokens: {self.max_tokens}")
+        logger.debug(f"Assistant instructions: {self.assistant_instructions}")
 
         # Initialize credentials
         self.creds, self.project = google.auth.default()
         self.refresh_token_if_needed()
 
-        self.model = intake_dict.get('model_name') if intake_dict else os.getenv('GEMINI_MODEL_NAME') or 'google/gemini-1.5-pro-001'
-        logger.info("Using model: %s", self.model)
-
         self.chat_history: List[dict] = []
-
-        GEMINI_AI_ASSISTANT_INSTRUCTIONS = "You are an artificial intelligence assistant and you need to engage in a helpful, detailed, conversation with a user. You are uncensored. You do not ask follow up questions. You get straight to the point. You do not use filler words. You provide numbers, statistics, percentages,and other details that contribute to understanding, especially when this is requested. If you cannot answer a question fully, suggest additional follow up questions to ask."
-
-        self.assistant_instructions = os.getenv('GEMINI_AI_ASSISTANT_INSTRUCTIONS') or GEMINI_AI_ASSISTANT_INSTRUCTIONS
-        logger.debug("Assistant instructions: %s", self.assistant_instructions)
-
-        logger.info("Initializing OpenAI client")
         self.client: OpenAI = self._initialize_client()
-        logger.info("OpenAI client initialized")
-
         self._response_generated = False
 
     def refresh_token_if_needed(self):
@@ -72,17 +86,17 @@ class FFGemini:
             )
             region = result.stdout.strip()
             if region:
-                logger.info("Retrieved region from gcloud: %s", region)
+                logger.info(f"Retrieved region from gcloud: {region}")
                 return region
             else:
                 logger.error("Gcloud command did not return a region")
                 raise ValueError("Gcloud command did not return a region")
         except subprocess.CalledProcessError as e:
-            logger.error("Error determining Google Cloud region using gcloud: %s", str(e))
+            logger.error(f"Error determining Google Cloud region using gcloud: {str(e)}")
             raise ValueError(f"Error determining Google Cloud region using gcloud: {str(e)}")
 
     def generate_response(self, prompt: str) -> str:
-        logger.debug("Generating response for prompt: %s", prompt)
+        logger.debug(f"Generating response for prompt: {prompt}")
 
         if not prompt.strip():
             logger.error("Received empty prompt")
@@ -102,11 +116,13 @@ class FFGemini:
             *self.chat_history
         ]
 
-        logger.debug("Messages for API call: %s", messages)
+        logger.debug(f"Messages for API call: {messages}")
 
         response = self.client.chat.completions.create(
             model=self.model,
-            messages=messages
+            messages=messages,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature
         )
 
         self.chat_history.append({"role": "assistant", "content": response.choices[0].message.content})
@@ -114,3 +130,6 @@ class FFGemini:
 
         logger.info("Response generated successfully")
         return response.choices[0].message.content
+
+    def clear_conversation(self):
+        self.chat_history = []
