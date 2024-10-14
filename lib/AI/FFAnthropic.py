@@ -3,16 +3,21 @@
 
 import os
 import time
+import logging
 from typing import Optional, List
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
 load_dotenv()
 
+# Configure logging
+logger = logging.getLogger(__name__)
+
 class FFAnthropic:
     def __init__(self, config: Optional[dict] = None, **kwargs):
-        # DEFAULT VALUES
+        logger.info("Initializing FFAnthropic")
 
+        # DEFAULT VALUES
         default_max_model = 'max-tokens-3-5-sonnet-2024-07-15'
         defaults = {
             'model': "claude-3-5-sonnet-20240620",
@@ -51,21 +56,30 @@ class FFAnthropic:
         self.system_instructions = getattr(self, 'system_instructions', os.getenv('ANTHROPIC_ASSISTANT_INSTRUCTIONS', defaults['instructions']))
         self.max_model = getattr(self, 'max_model', None)
 
+        logger.debug(f"Model: {self.model}, Temperature: {self.temperature}, Max Tokens: {self.max_tokens}")
+        logger.debug(f"System instructions: {self.system_instructions}")
+        logger.debug(f"Max model: {self.max_model}")
+
         self.conversation_history = []
-        self.client: Anthropic = self._initialize_client()       
+        self.client: Anthropic = self._initialize_client()
              
     def _initialize_client(self) -> Anthropic:
+        logger.info("Initializing Anthropic client")
         api_key = self.api_key
         if not api_key:
+            logger.error("API key not found")
             raise ValueError("API key not found")
         
         return Anthropic(api_key=api_key)
 
     def generate_response(self, prompt: str) -> str:
+        logger.debug(f"Generating response for prompt: {prompt}")
+
         try:
             self.conversation_history.append({"role": "user", "content": prompt})
             
             if self.max_model:
+                logger.info(f"Using max model: {self.max_model}")
                 response = self.client.messages.create(
                     model=self.model,
                     max_tokens=self.max_tokens,
@@ -86,21 +100,20 @@ class FFAnthropic:
             assistant_response = response.content[0].text
             self.conversation_history.append({"role": "assistant", "content": assistant_response})
             
+            logger.info("Response generated successfully")
             return assistant_response
         except Exception as e:
-            print("problem with response generation")
-            print("  -- model: ", self.model)
-            print("  -- system: ", self.system_instructions)
-            # print string representation of clas object
-            print("  -- exception: ", e)
-            print("  -- conversation history: ", self.conversation_history)
-            print("  -- max_model: ", self.max_model)
-            print("  -- max_tokens: ", self.max_tokens)
-            print("  -- temperature: ", self.temperature)
-            # Error(f"Error generating response from Claude: {str(e)}")
-
+            logger.error("Problem with response generation")
+            logger.error(f"  -- exception: {str(e)}")
+            logger.error(f"  -- model: {self.model}")
+            logger.error(f"  -- system: {self.system_instructions}")
+            logger.error(f"  -- conversation history: {self.conversation_history}")
+            logger.error(f"  -- max_model: {self.max_model}")
+            logger.error(f"  -- max_tokens: {self.max_tokens}")
+            logger.error(f"  -- temperature: {self.temperature}")
             
             raise RuntimeError(f"Error generating response from Claude: {str(e)}")
 
     def clear_conversation(self):
+        logger.info("Clearing conversation history")
         self.conversation_history = []
