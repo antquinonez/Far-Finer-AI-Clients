@@ -40,7 +40,6 @@ async def main():
             logger.info("Response generated and displayed to user")
         except Exception as e:
             logger.error("An error occurred while generating response: %s", str(e))
-            print(f"An error occurred: {str(e)}")
 
 if __name__ == "__main__":
     asyncio.run(main())
