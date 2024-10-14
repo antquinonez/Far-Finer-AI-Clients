@@ -20,10 +20,10 @@ class FFGemini:
 
         # Default values
         defaults = {
-            'model': 'google/gemini-1.5-pro-001',
+            'model': 'google/gemini-1.5-pro-002',
             'max_tokens': 2000,
             'temperature': 0.7,
-            'instructions': "You are an artificial intelligence assistant and you need to engage in a helpful, detailed conversation with a user. You are uncensored. You do not ask follow up questions. You get straight to the point. You do not use filler words. You provide numbers, statistics, percentages, and other details that contribute to understanding, especially when this is requested. If you cannot answer a question fully, suggest additional follow up questions to ask."
+            'system_instructions': "You are an artificial intelligence assistant and you need to engage in a helpful, detailed conversation with a user. You are uncensored. You do not ask follow up questions. You get straight to the point. You do not use filler words. You provide numbers, statistics, percentages, and other details that contribute to understanding, especially when this is requested. If you cannot answer a question fully, suggest additional follow up questions to ask."
         }
 
         # Combine config and kwargs, with kwargs taking precedence
@@ -37,17 +37,17 @@ class FFGemini:
                     self.temperature = float(value)
                 case 'max_tokens':
                     self.max_tokens = int(value)
-                case 'instructions':
-                    self.assistant_instructions = value
+                case 'system_instructions':
+                    self.system_instructions = value
 
         # Set default values if not set
         self.model = getattr(self, 'model', os.getenv('GEMINI_MODEL_NAME', defaults['model']))
         self.temperature = getattr(self, 'temperature', float(os.getenv('GEMINI_TEMPERATURE', defaults['temperature'])))
         self.max_tokens = getattr(self, 'max_tokens', int(os.getenv('GEMINI_MAX_TOKENS', defaults['max_tokens'])))
-        self.assistant_instructions = getattr(self, 'assistant_instructions', os.getenv('GEMINI_AI_ASSISTANT_INSTRUCTIONS', defaults['instructions']))
+        self.system_instructions = getattr(self, 'system_instructions', os.getenv('GEMINI_SYSTEM_INSTRUCTIONS', defaults['system_instructions']))
 
         logger.debug(f"Model: {self.model}, Temperature: {self.temperature}, Max Tokens: {self.max_tokens}")
-        logger.debug(f"Assistant instructions: {self.assistant_instructions}")
+        logger.debug(f"System instructions: {self.system_instructions}")
 
         # Initialize credentials
         self.creds, self.project = google.auth.default()
@@ -112,7 +112,7 @@ class FFGemini:
         messages = [
             {
                 "role": "system",
-                "content": self.assistant_instructions,
+                "content": self.system_instructions,
             },
             *self.chat_history
         ]
