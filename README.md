@@ -19,7 +19,7 @@ This is beta software. Use at your own risk. Watch those tokens!
 2. `FFAnthropicCached`: Caching of system instructions
 
 ### OpenAI:
-- `FFOpenAI`: Uses the OpenAI Assistant API. See: https://platform.openai.com/docs/assistants/overview
+- `FFOpenAIAssistant`: Uses the OpenAI Assistant API. See: https://platform.openai.com/docs/assistants/overview
 
 ### Gemini:
 - `FFGemini`: Uses the Gemini API. Use gcloud to authenticate. No token.
