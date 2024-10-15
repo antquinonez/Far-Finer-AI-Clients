@@ -30,7 +30,29 @@ class FFOpenAI:
         assistant_id (str): The ID of the assistant being used.
         thread_id (str): The ID of the current conversation thread.
         client (OpenAI): The OpenAI client instance.
-        response_format (str): The format of the response. Defaults to "auto". Options: "text", "auto", "json_object".
+        response_format (str): The format of the response. Defaults to "auto". Options: 
+            {"type": "json_object"}
+            {"type": "text"}
+            'auto'
+
+            or something like this:
+                {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "test_schema",
+                    "schema": Messages.model_json_schema()
+                }
+            }
+
+            where Messages is a Pydantic model, as in:
+            class Message(BaseModel):
+                user_question: str
+                ai_response: str
+                confidence: float
+
+            class Messages(BaseModel):
+                messages: list[Message]
+
     """
 
     def __init__(self, config: Optional[dict] = None, **kwargs):
