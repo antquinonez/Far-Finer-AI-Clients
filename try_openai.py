@@ -7,7 +7,7 @@ def main():
     # Create an instance of the ChatGPT class
     ai = FFOpenAI()
 
-    print("ChatGPT Assistant initialized. Type 'exit' to quit.")
+    print("OpenAI Assistant initialized. Type 'exit' to quit.")
 
     while True:
         # Get user input
