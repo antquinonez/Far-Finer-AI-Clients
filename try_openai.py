@@ -14,6 +14,7 @@ def main():
     config = {
         'max_tokens': 1000,  # or any other value
         'temperature': 0.7,  # or any other value
+        'assistant_name': "Borges",
     }
 
     try:
