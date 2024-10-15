@@ -47,7 +47,8 @@ class FFOpenAI:
             'model': "gpt-3.5-turbo",
             'max_tokens': 1000,
             'temperature': 0.5,
-            'instructions': "Respond accurately to user queries. Be thorough but not repetitive. Be concise. Never start with a preamble. Immediately address the ask or request. Do not add meta information about your response. If there's nothing to do, answer with 'Not Applicable'."
+            'assistant_name': "default",
+            'system_instructions': "Respond accurately to user queries. Be thorough but not repetitive. Be concise. Never start with a preamble. Immediately address the ask or request. Do not add meta information about your response. If there's nothing to do, answer with 'Not Applicable'."
         }
 
         # Combine config and kwargs, with kwargs taking precedence
@@ -78,8 +79,8 @@ class FFOpenAI:
         self.model = getattr(self, 'model', os.getenv('OPENAI_MODEL', defaults['model']))
         self.temperature = getattr(self, 'temperature', float(os.getenv('OPENAI_TEMPERATURE', defaults['temperature'])))
         self.max_tokens = getattr(self, 'max_tokens', int(os.getenv('OPENAI_MAX_TOKENS', defaults['max_tokens'])))
-        self.system_instructions = getattr(self, 'system_instructions', os.getenv('OPENAI_ASSISTANT_INSTRUCTIONS', defaults['instructions']))
-        self.assistant_name = getattr(self, 'assistant_name', os.getenv('OPENAI_ASSISTANT_NAME', 'default'))
+        self.system_instructions = getattr(self, 'system_instructions', os.getenv('OPENAI_ASSISTANT_INSTRUCTIONS', defaults['system_instructions']))
+        self.assistant_name = getattr(self, 'assistant_name', os.getenv('OPENAI_ASSISTANT_NAME', defaults['assistant_name']))
         self.assistant_id = getattr(self, 'assistant_id', None)
         self.thread_id = getattr(self, 'thread_id', None)
 
