@@ -3,11 +3,15 @@
 
 import os
 import time
+import logging
 from typing import Optional
 from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 class FFOpenAI:
     """
@@ -42,6 +46,8 @@ class FFOpenAI:
         3. Environment variables
         4. Default values
         """
+        logger.info("Initializing FFOpenAI")
+
         # DEFAULT VALUES
         defaults = {
             'model': "gpt-3.5-turbo",
@@ -84,6 +90,10 @@ class FFOpenAI:
         self.assistant_id = getattr(self, 'assistant_id', None)
         self.thread_id = getattr(self, 'thread_id', None)
 
+        logger.debug(f"Model: {self.model}, Temperature: {self.temperature}, Max Tokens: {self.max_tokens}")
+        logger.debug(f"System instructions: {self.system_instructions}")
+        logger.debug(f"Assistant name: {self.assistant_name}")
+
         # Initialize the OpenAI client and get the assistant
         self.client: OpenAI = self._initialize_client()
         self.assistant_id = self._get_assistant(self.assistant_id)
@@ -95,7 +105,9 @@ class FFOpenAI:
         Returns:
             OpenAI: An instance of the OpenAI client.
         """
+        logger.info("Initializing OpenAI client")
         if not self.api_key:
+            logger.error("API key not found")
             raise ValueError("API key not found")
         
         return OpenAI(api_key=self.api_key)
@@ -110,21 +122,25 @@ class FFOpenAI:
         Returns:
             str: The ID of the retrieved or created assistant.
         """
+        logger.info("Getting or creating assistant")
         if assistant_id:
             try:
                 assistant = self.client.beta.assistants.retrieve(assistant_id)
+                logger.info(f"Retrieved existing assistant with ID: {assistant_id}")
                 return assistant.id
             except Exception as e:
-                print(f"Error retrieving assistant with ID {assistant_id}: {str(e)}")
+                logger.error(f"Error retrieving assistant with ID {assistant_id}: {str(e)}")
         
         try:
             assistants = self.client.beta.assistants.list(order="desc")
             for assistant in assistants.data:
                 if assistant.name == self.assistant_name:
+                    logger.info(f"Found existing assistant with name: {self.assistant_name}")
                     return assistant.id
         except Exception as e:
-            print(f"Error listing assistants: {str(e)}")
+            logger.error(f"Error listing assistants: {str(e)}")
         
+        logger.info("Creating new assistant")
         return self._create_assistant(self.assistant_name)
 
     def _create_assistant(self, name: str) -> str:
@@ -143,8 +159,10 @@ class FFOpenAI:
                 instructions=self.system_instructions,
                 model=self.model
             )
+            logger.info(f"Created new assistant with ID: {assistant.id}")
             return assistant.id
         except Exception as e:
+            logger.error(f"Error creating OpenAI assistant: {str(e)}")
             raise RuntimeError(f"Error creating OpenAI assistant: {str(e)}")
 
     def _ensure_thread(self) -> None:
@@ -154,6 +172,9 @@ class FFOpenAI:
         if self.thread_id is None:
             thread = self.client.beta.threads.create()
             self.thread_id = thread.id
+            logger.info(f"Created new thread with ID: {self.thread_id}")
+        else:
+            logger.debug(f"Using existing thread with ID: {self.thread_id}")
 
     def _run_conversation(self, prompt: str) -> str:
         """
@@ -165,6 +186,7 @@ class FFOpenAI:
         Returns:
             str: The assistant's response.
         """
+        logger.debug(f"Running conversation with prompt: {prompt}")
         self._ensure_thread()
         
         try:
@@ -174,26 +196,33 @@ class FFOpenAI:
                 role="user",
                 content=prompt
             )
+            logger.debug("Added user message to thread")
 
             # Create and monitor the run
             run = self.client.beta.threads.runs.create(
                 thread_id=self.thread_id,
                 assistant_id=self.assistant_id
             )
+            logger.debug(f"Created run with ID: {run.id}")
 
             # Wait for the run to complete
             while run.status in ['queued', 'in_progress']:
                 time.sleep(1)
                 run = self.client.beta.threads.runs.retrieve(thread_id=self.thread_id, run_id=run.id)
+                logger.debug(f"Run status: {run.status}")
 
             if run.status != 'completed':
+                logger.error(f"Run failed with status: {run.status}")
                 raise RuntimeError(f"Run failed with status: {run.status}")
 
             # Retrieve the assistant's response
             messages = self.client.beta.threads.messages.list(thread_id=self.thread_id)
-            return messages.data[0].content[0].text.value
+            response = messages.data[0].content[0].text.value
+            logger.info("Retrieved assistant's response")
+            return response
 
         except Exception as e:
+            logger.error(f"Error in OpenAI conversation: {str(e)}")
             raise RuntimeError(f"Error in OpenAI conversation: {str(e)}")
 
     def generate_response(self, prompt: str) -> str:
@@ -206,4 +235,5 @@ class FFOpenAI:
         Returns:
             str: The generated response from the OpenAI model.
         """
+        logger.info("Generating response")
         return self._run_conversation(prompt)
