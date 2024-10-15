@@ -30,6 +30,7 @@ class FFOpenAI:
         assistant_id (str): The ID of the assistant being used.
         thread_id (str): The ID of the current conversation thread.
         client (OpenAI): The OpenAI client instance.
+        response_format (str): The format of the response. Defaults to "auto". Options: "text", "auto", "json_object".
     """
 
     def __init__(self, config: Optional[dict] = None, **kwargs):
@@ -54,6 +55,7 @@ class FFOpenAI:
             'max_tokens': 1000,
             'temperature': 0.5,
             'assistant_name': "default",
+            'response_format': "auto",
             'system_instructions': "Respond accurately to user queries. Be thorough but not repetitive. Be helpful and obliging."
         }
 
@@ -79,6 +81,8 @@ class FFOpenAI:
                     self.assistant_id = value
                 case 'thread_id':
                     self.thread_id = value
+                case 'response_format':
+                    self.response_format = value
 
         # Set default values if not set
         self.api_key = getattr(self, 'api_key', os.getenv('OPENAI_TOKEN'))
@@ -89,6 +93,7 @@ class FFOpenAI:
         self.assistant_name = getattr(self, 'assistant_name', os.getenv('OPENAI_ASSISTANT_NAME', defaults['assistant_name']))
         self.assistant_id = getattr(self, 'assistant_id', None)
         self.thread_id = getattr(self, 'thread_id', None)
+        self.response_format = getattr(self, 'response_format', os.getenv('OPENAI_RESPONSE_FORMAT', defaults['response_format']))
 
         logger.debug(f"Model: {self.model}, Temperature: {self.temperature}, Max Tokens: {self.max_tokens}")
         logger.debug(f"System instructions: {self.system_instructions}")
@@ -157,7 +162,8 @@ class FFOpenAI:
             assistant = self.client.beta.assistants.create(
                 name=name,
                 instructions=self.system_instructions,
-                model=self.model
+                model=self.model,
+                response_format=self.response_format
             )
             logger.info(f"Created new assistant with ID: {assistant.id}")
             return assistant.id
