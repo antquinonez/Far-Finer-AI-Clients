@@ -2,6 +2,7 @@ anthropic
 openai
 configparser
 python-dotenv
+pydantic
 
 google-auth
 google-cloud-secret-manager
