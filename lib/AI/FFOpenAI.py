@@ -50,11 +50,11 @@ class FFOpenAI:
 
         # DEFAULT VALUES
         defaults = {
-            'model': "gpt-3.5-turbo",
+            'model': "gpt-4o-mini",
             'max_tokens': 1000,
             'temperature': 0.5,
             'assistant_name': "default",
-            'system_instructions': "Respond accurately to user queries. Be thorough but not repetitive. Be concise. Never start with a preamble. Immediately address the ask or request. Do not add meta information about your response. If there's nothing to do, answer with 'Not Applicable'."
+            'system_instructions': "Respond accurately to user queries. Be thorough but not repetitive. Be helpful and obliging."
         }
 
         # Combine config and kwargs, with kwargs taking precedence
