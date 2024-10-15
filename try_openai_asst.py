@@ -1,7 +1,7 @@
 # Copyright (c) 2024 Antonio Quinonez
 # Licensed under the MIT License. See LICENSE in the project root for license information.
 
-from lib.AI.FFOpenAI import FFOpenAI
+from lib.AI.FFOpenAIAssistant import FFOpenAIAssistant
 import logging
 from enum import Enum
 
@@ -29,7 +29,7 @@ def main():
 
     try:
         # Create an instance of the FFOpenAI class
-        ai = FFOpenAI(config)
+        ai = FFOpenAIAssistant(config)
         logger.info("FFOpenAI initialized successfully")
     except Exception as e:
         logger.error("Failed to initialize FFOpenAI: %s", str(e))

@@ -13,7 +13,7 @@ load_dotenv()
 # Configure logging
 logger = logging.getLogger(__name__)
 
-class FFOpenAI:
+class FFOpenAIAssistant:
     """
     A class to interact with OpenAI's API, specifically designed for chat-based models.
 
