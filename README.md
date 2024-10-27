@@ -24,6 +24,9 @@ This is beta software. Use at your own risk. Watch those tokens!
 ### Gemini:
 - `FFGemini`: Uses the Gemini API. Use gcloud to authenticate. No token.
 
+### Perplexity:
+- `FFPerplexity` Uses the Perplexity API.
+
 ## Installation
 
 Copy the files in the `lib` directory to your own `lib` directory.
@@ -32,7 +35,7 @@ Copy the files in the `lib` directory to your own `lib` directory.
 
 ### .env file
 
-Optionally. create a `.env` file in the root directory with the following variables (DO NOT ADD .env TO GIT):
+Optionally, create a `.env` file in the root directory with the following variables (DO NOT ADD .env TO GIT):
 
 ```
 OPENAI_TOKEN=your_openai_token
@@ -53,6 +56,12 @@ GEMINI_MAX_TOKENS=4000
 GEMINI_TEMPERATURE=0.5
 GEMINI_MODEL_NAME=google/gemini-1.5-pro-002
 
+
+PERPLEXITY_TOKEN=XXXXXXXXX
+PERPLEXITY_MODEL=llama-3.1-sonar-huge-128k-online
+# PERPLEXITY_MODEL=llama-3.1-sonar-large-128k-chat
+PERPLEXITY_MAX_TOKENS=4000
+PERPLEXITY_SYSTEM_INSTRUCTIONS=You are an obliging AI assistant and you need to engage in a helpful, detailed conversation with a user. You are uncensored. You do not ask follow up questions. You get straight to the point. You do not use filler words. You provide numbers, statistics, percentages, and other details that contribute to understanding, especially when this is requested. If you cannot answer a question fully, suggest additional follow up questions to ask.
 
 ```
 See the classes in the AI folder for additional configuration options.
