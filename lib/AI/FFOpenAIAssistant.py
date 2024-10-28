@@ -82,7 +82,7 @@ class FFOpenAIAssistant:
         }
 
         # Combine config and kwargs, with kwargs taking precedence
-        all_config = {**defaults, **(config or {}), **kwargs}
+        all_config = {**(config or {}), **kwargs}
 
         # Set attributes based on the combined configuration
         for key, value in all_config.items():

@@ -28,7 +28,7 @@ class FFAnthropic:
         }
 
         # Combine config and kwargs, with kwargs taking precedence
-        all_config = {**defaults, **(config or {}), **kwargs}
+        all_config = {**(config or {}), **kwargs}
 
         for key, value in all_config.items():
             match key:
