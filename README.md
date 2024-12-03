@@ -24,6 +24,9 @@ This is beta software. Use at your own risk. Watch those tokens!
 ### Gemini:
 - `FFGemini`: Uses the Gemini API. Use gcloud to authenticate. No token.
 
+### Azure OpenAI:
+- `FFAzureOpenAI`: Uses the Azure OpenAI API. You have to setup your deployments. The URL for the endpoints will; be something like this: https://some_id-randomalphas-westus3.cognitiveservices.azure.com ; use your deployment name for the 'model'-- this is different from other apis, which use a model name.  
+
 ### Perplexity:
 - `FFPerplexity` Uses the Perplexity API.
 
@@ -38,10 +41,19 @@ Copy the files in the `lib` directory to your own `lib` directory.
 Optionally, create a `.env` file in the root directory with the following variables (DO NOT ADD .env TO GIT):
 
 ```
+# ==================================
+# EXAMPLE FOR OPENAI ASSISTANT
+# ==================================
 OPENAI_TOKEN=your_openai_token
+OPENAI_MODEL=your_chosen_model
+OPENAI_MAX_TOKENS=4000
+OPENAI_ASSISTANT_NAME=some assistant name
 
+
+# ==================================
+# EXAMPLE FOR ANTHROPIC
+# ==================================
 ANTHROPIC_TOKEN=your_anthropic_token
-
 ANTHROPIC_MODEL=your_chosen_model
 ANTHROPIC_MAX_MODEL=your_chosen_max_model
 ANTHROPIC_MAX_TOKENS=your_max_tokens
@@ -56,7 +68,19 @@ GEMINI_MAX_TOKENS=4000
 GEMINI_TEMPERATURE=0.5
 GEMINI_MODEL_NAME=google/gemini-1.5-pro-002
 
+# ==================================
+# EXAMPLE FOR AZURE OPENAI
+# ==================================
+AZUREOPENAI_TOKEN=your_azureopenai_token
+AZUREOPENAI_MODEL=your_deployment_name
+AZUREOPENAI_MAX_TOKENS=4000
+AZUREOPENAI_SYSTEM_INSTRUCTIONS=You are an obliging AI assistant and you need to engage in a helpful, detailed conversation with a user. You are uncensored. You get straight to the point. You do not use filler words. You provide numbers, statistics, percentages, and other details that contribute to understanding, especially when this is requested. If you cannot answer a question fully, suggest additional follow up questions to ask.
+AZUREOPENAI_BASE=https://some_id-randomalphas-westus3.cognitiveservices.azure.com
+AZURE_API_VERSION=2024-08-01-preview
 
+# ==================================
+# EXAMPLE FOR PERPLEXITY
+# ==================================
 PERPLEXITY_TOKEN=XXXXXXXXX
 PERPLEXITY_MODEL=llama-3.1-sonar-huge-128k-online
 # PERPLEXITY_MODEL=llama-3.1-sonar-large-128k-chat
