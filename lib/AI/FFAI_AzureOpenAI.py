@@ -29,44 +29,73 @@ class FFAI_AzureOpenAI:
         return '\n'.join(cleaned_lines)
 
     def _build_prompt(self, prompt: str, history: Optional[List[str]] = None) -> str:
-        if history:
-            # Clean the incoming prompt
-            cleaned_prompt = re.sub(r'<RAG>[\s\S]*?</RAG>', '', prompt)
+        if not history:
+            return prompt
             
-            # Get history and clean any RAG tags from it
-            rag = self.ordered_history.get_formatted_responses(history)
-            cleaned_rag = re.sub(r'<RAG>[\s\S]*?</RAG>', '', rag)
-            
+        # Clean the incoming prompt
+        cleaned_prompt = re.sub(r'<RAG>[\s\S]*?</RAG>', '', prompt)
+        
+        # Get history including full conversation chains
+        full_history = []
+        processed_prompts = set()  # To prevent infinite loops
+        
+        def collect_history(prompt_names):
+            for prompt_name in prompt_names:
+                if prompt_name in processed_prompts:
+                    continue
+                    
+                processed_prompts.add(prompt_name)
+                latest = self.ordered_history.get_latest_interaction_by_prompt_name(prompt_name)
+                
+                if latest:
+                    # Recursively process this prompt's history if it exists
+                    if hasattr(latest, 'history') and latest.history:
+                        collect_history(latest.history)
+                    
+                    # Add this prompt and response
+                    full_history.append({
+                        'prompt': latest.prompt,
+                        'response': latest.response
+                    })
+        
+        collect_history(history)
+        
+        # Get formatted responses for the full chain
+        formatted_responses = []
+        for entry in full_history:
+            formatted_responses.append(f"<prompt:{entry['prompt']}>{entry['response']}</prompt:{entry['prompt']}>")
+        
+        rag = "\n".join(formatted_responses)
+        
+        if rag:
             final_prompt = f"""
             <RAG>
-            {cleaned_rag}
+            {rag}
             </RAG>
             ========
             PROMPT
             ========
             {cleaned_prompt}
             """
-            
-            final_prompt = self._clean_text(final_prompt)
-            logger.info(f"final prompt: {final_prompt}")
-            return final_prompt
         else:
-            return prompt
+            final_prompt = cleaned_prompt
+        
+        final_prompt = self._clean_text(final_prompt)
+        logger.info(f"final prompt: {final_prompt}")
+        return final_prompt
 
     def generate_response(self,
-                          prompt: str,
-                          model: Optional[str] = None,
-                          prompt_name: Optional[str] = None,
-                          history: Optional[List[str]] = None ) -> str:
+                        prompt: str,
+                        model: Optional[str] = None,
+                        prompt_name: Optional[str] = None,
+                        history: Optional[List[str]] = None ) -> str:
         
         logger.debug(f"Generating response for prompt: {prompt}")
         used_model = model if model else self.client.model
         logger.debug(f"Using model: {used_model}")
 
-
         prompt = self._build_prompt(prompt, history)
         logger.debug(f"Using prompt: {prompt}")
-
 
         try:
             # Add to permanent history
@@ -82,7 +111,8 @@ class FFAI_AzureOpenAI:
                 model=used_model,
                 prompt=prompt,
                 response=response,
-                prompt_name=prompt_name
+                prompt_name=prompt_name,
+                history=history  # Pass the history parameter here
             )
             
             logger.info("Response generated successfully")
