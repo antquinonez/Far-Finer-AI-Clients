@@ -47,7 +47,7 @@ class FFAzureOpenAI:
         self.model = getattr(self, 'model', os.getenv('AZUREOPENAI_MODEL', defaults['model']))
         self.temperature = getattr(self, 'temperature', float(os.getenv('AZUREOPENAI_TEMPERATURE', defaults['temperature'])))
         self.max_tokens = getattr(self, 'max_tokens', int(os.getenv('AZUREOPENAI_MAX_TOKENS', defaults['max_tokens'])))
-        self.system_instructions = getattr(self, 'system_instructions', os.getenv('AZUREOPENAI_ASSISTANT_INSTRUCTIONS', defaults['instructions']))
+        self.system_instructions = getattr(self, 'system_instructions', os.getenv('AZUREOPENAI_SYSTEM_INSTRUCTIONS', defaults['instructions']))
 
         logger.debug(f"Model: {self.model}, Temperature: {self.temperature}, Max Tokens: {self.max_tokens}")
         logger.debug(f"System instructions: {self.system_instructions}")
@@ -70,8 +70,11 @@ class FFAzureOpenAI:
                             api_version = api_version
         )
 
-    def generate_response(self, prompt: str) -> str:
+    def generate_response(self, prompt: str, model: Optional[str] = None, prompt_name: Optional[str] = None) -> str:
         logger.debug(f"Generating response for prompt: {prompt}")
+        used_model = model if model else self.model
+        logger.debug(f"Using model: {used_model}")
+
 
         try:
             self.conversation_history.append({"role": "user", "content": prompt})
@@ -85,7 +88,7 @@ class FFAzureOpenAI:
             ]
 
             response = self.client.chat.completions.create(
-                model=self.model,
+                model=used_model,
                 messages=messages,
                 max_tokens=self.max_tokens,
                 temperature=self.temperature
@@ -99,13 +102,13 @@ class FFAzureOpenAI:
         except Exception as e:
             logger.error("Problem with response generation")
             logger.error(f"  -- exception: {str(e)}")
-            logger.error(f"  -- model: {self.model}")
+            logger.error(f"  -- model: {used_model}")
             logger.error(f"  -- system: {self.system_instructions}")
             logger.error(f"  -- conversation history: {self.conversation_history}")
             logger.error(f"  -- max_tokens: {self.max_tokens}")
             logger.error(f"  -- temperature: {self.temperature}")
             
-            raise RuntimeError(f"Error generating response from Perplexity: {str(e)}")
+            raise RuntimeError(f"Error generating response from Azure OpenAI: {str(e)}")
 
     def clear_conversation(self):
         logger.info("Clearing conversation history")
