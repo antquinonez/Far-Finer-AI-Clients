@@ -6,6 +6,7 @@ from copy import deepcopy
 from .OrderedPromptHistory import OrderedPromptHistory
 from .PermanentHistory import PermanentHistory
 from .FFAzureOpenAI import FFAzureOpenAI
+import re
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -16,11 +17,55 @@ class FFAI_AzureOpenAI:
         self.client = azure_client
         self.permanent_history = PermanentHistory()
         self.ordered_history = OrderedPromptHistory()
+
+    def _clean_text(self, text):
+        cleaned_lines = []
+        for line in text.splitlines():
+            # Remove extra spaces within each line
+            cleaned_line = ' '.join(line.split())
+            cleaned_lines.append(cleaned_line)
         
-    def generate_response(self, prompt: str, model: Optional[str] = None, prompt_name: Optional[str] = None) -> str:
+        # Join lines back together with newlines
+        return '\n'.join(cleaned_lines)
+
+    def _build_prompt(self, prompt: str, history: Optional[List[str]] = None) -> str:
+        if history:
+
+            cleaned_prompt = re.sub(r'<RAG>[\s\S]*?</RAG>', '', prompt)
+
+            rag = self.ordered_history.get_formatted_responses(history)
+            logger.info(f"RAG: {rag}")
+
+            final_prompt = f"""
+            <RAG>
+            {rag}
+            </RAG>
+            ========
+            PROMPT
+            ========
+            {cleaned_prompt}
+            """
+
+            final_prompt = self._clean_text(final_prompt)
+            logger.info(f"final prompt: {final_prompt}")
+            return final_prompt
+        else:
+            return prompt
+
+    def generate_response(self,
+                          prompt: str,
+                          model: Optional[str] = None,
+                          prompt_name: Optional[str] = None,
+                          history: Optional[List[str]] = None ) -> str:
+        
         logger.debug(f"Generating response for prompt: {prompt}")
         used_model = model if model else self.client.model
         logger.debug(f"Using model: {used_model}")
+
+
+        prompt = self._build_prompt(prompt, history)
+        logger.debug(f"Using prompt: {prompt}")
+
 
         try:
             # Add to permanent history
@@ -111,3 +156,29 @@ class FFAI_AzureOpenAI:
         """Clear the conversation history in the wrapped client"""
         logger.info("Clearing conversation history in wrapped client (permanent and ordered histories retained)")
         self.client.clear_conversation()
+
+    def get_latest_responses_by_prompt_names(self, prompt_names: List[str]) -> Dict[str, Dict[str, str]]:
+        """
+        Get the latest prompt and response for each specified prompt name.
+        
+        Args:
+            prompt_names: List of prompt names to retrieve
+            
+        Returns:
+            Dictionary with prompt names as keys and dictionaries containing 
+            'prompt' and 'response' as values
+        """
+        return self.ordered_history.get_latest_responses_by_prompt_names(prompt_names)
+    
+    def get_formatted_responses(self, prompt_names: List[str]) -> str:
+        """
+        Get formatted string output of latest prompts and responses.
+        
+        Args:
+            prompt_names: List of prompt names to include
+            
+        Returns:
+            Formatted string in the format:
+            <prompt:[prompt text]>[response]</prompt:[prompt text]>
+        """
+        return self.ordered_history.get_formatted_responses(prompt_names)
