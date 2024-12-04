@@ -12,22 +12,33 @@ The general approach is:
 
 This is beta software. Use at your own risk. Watch those tokens!
 
-## AI Clients
+## Super Clients (FFAI_)
+These are built on top of the `Enhanced AI Clients` below.
 
-### Anthropic:
+At some point, there will be only one class that will accept any Enhanced Client as a parameter. The 
+
+### Azure OpenAI
+`FFAI_AzureOpenAI`: Maintains prompt-response history outside of the llm memory, which can get expensive.
+
+### Anthropic -- prototype of the Super Clients
+`FFAnthropicCached`:
+
+## Enhanced AI Clients
+
+### Anthropic
 1. `FFAnthropic`: Use of Basic and Max models
-2. `FFAnthropicCached`: Caching of system instructions
+2. `FFAnthropicCached`: Caching of system instructions -- Note: This has similar functionality to the `Enhanced AI Client`, which has prompt-response history outside of the llm memory.
 
-### OpenAI:
+### OpenAI
 - `FFOpenAIAssistant`: Uses the OpenAI Assistant API. See: https://platform.openai.com/docs/assistants/overview
 
-### Gemini:
+### Gemini
 - `FFGemini`: Uses the Gemini API. Use gcloud to authenticate. No token.
 
-### Azure OpenAI:
+### Azure OpenAI
 - `FFAzureOpenAI`: Uses the Azure OpenAI API. You have to setup your deployments. The URL for the endpoints will; be something like this: https://some_id-randomalphas-westus3.cognitiveservices.azure.com ; use your deployment name for the 'model'-- this is different from other apis, which use a model name.  
 
-### Perplexity:
+### Perplexity
 - `FFPerplexity` Uses the Perplexity API.
 
 ## Installation
