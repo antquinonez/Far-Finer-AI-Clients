@@ -15,6 +15,7 @@ class Interaction:
     prompt_name: Optional[str]
     prompt: str
     response: str
+    history: Optional[List[str]] = None  # Added history field
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -24,6 +25,7 @@ class Interaction:
             "prompt_name": self.prompt_name,
             "prompt": self.prompt,
             "response": self.response,
+            "history": self.history,  # Include history in dict representation
             "datetime": datetime.fromtimestamp(self.timestamp).isoformat()
         }
 
@@ -32,31 +34,55 @@ class OrderedPromptHistory:
         self.prompt_dict: OrderedDict[str, List[Interaction]] = OrderedDict()
         self._current_sequence = 0
     
-    def add_interaction(self, model: str, prompt: str, response: str, prompt_name: Optional[str] = None) -> Interaction:
+    def _clean_text(self, text: str) -> str:
+        """Clean text by removing RAG tags, PROMPT sections, and extra whitespace"""
+        # Remove RAG sections
+        cleaned = re.sub(r'<RAG>[\s\S]*?</RAG>', '', text)
+        # Remove PROMPT sections
+        cleaned = re.sub(r'========\s*PROMPT\s*========[\s\S]*', '', cleaned)
+        
+        # Clean whitespace line by line
+        cleaned_lines = []
+        for line in cleaned.splitlines():
+            cleaned_line = ' '.join(line.split())
+            if cleaned_line:  # Only add non-empty lines
+                cleaned_lines.append(cleaned_line)
+        
+        return '\n'.join(cleaned_lines).strip()
+    
+    def add_interaction(self, model: str, prompt: str, response: str, 
+                       prompt_name: Optional[str] = None, 
+                       history: Optional[List[str]] = None) -> Interaction:
         """
-        Add a new interaction to the history
+        Add a new interaction to the history, storing cleaned versions of prompt and response
         
         Args:
             model: The model used for the interaction
             prompt: The prompt text
             response: The response text
             prompt_name: Optional name/key for the prompt. If None, uses prompt text as key
+            history: Optional list of prompt names that form the history chain for this interaction
         
         Returns:
             The created Interaction object
         """
         self._current_sequence += 1
         
-        # Use prompt text as prompt_name if none provided
-        effective_prompt_name = prompt_name if prompt_name is not None else prompt
+        # Clean prompt and response before storing
+        cleaned_prompt = self._clean_text(prompt)
+        cleaned_response = self._clean_text(response)
+        
+        # Use cleaned prompt text as prompt_name if none provided
+        effective_prompt_name = prompt_name if prompt_name is not None else cleaned_prompt
             
         interaction = Interaction(
             sequence_number=self._current_sequence,
             model=model,
             timestamp=time.time(),
             prompt_name=prompt_name,  # Store original prompt_name (which might be None)
-            prompt=prompt,
-            response=response
+            prompt=cleaned_prompt,
+            response=cleaned_response,
+            history=history  # Store the history chain
         )
         
         if effective_prompt_name not in self.prompt_dict:
@@ -115,7 +141,8 @@ class OrderedPromptHistory:
                 model=interaction.model,
                 prompt=interaction.prompt,
                 response=interaction.response,
-                prompt_name=interaction.prompt_name
+                prompt_name=interaction.prompt_name,
+                history=interaction.history  # Preserve history when resequencing
             )
     
     def to_dict(self) -> Dict[str, List[Dict[str, Any]]]:
@@ -145,18 +172,18 @@ class OrderedPromptHistory:
         """
         result = {}
         for prompt_name in prompt_names:
-            latest_interaction = self.get_latest_interaction_by_prompt_name(prompt_name)
-            if latest_interaction:
+            latest = self.get_latest_interaction_by_prompt_name(prompt_name)
+            if latest and latest.prompt and latest.response:
                 result[prompt_name] = {
-                    'prompt': latest_interaction.prompt,
-                    'response': latest_interaction.response
+                    'prompt': latest.prompt,
+                    'response': latest.response
                 }
         return result
     
     def get_formatted_responses(self, prompt_names: List[str]) -> str:
         """
-        Format the latest prompts and responses in the specified format:
-        <prompt:[prompt text]>[response]</prompt:[prompt text]>
+        Format the latest prompts and responses in the specified format,
+        including recursive history chains.
         
         Args:
             prompt_names: List of prompt names to include in the formatted output
@@ -164,24 +191,29 @@ class OrderedPromptHistory:
         Returns:
             Formatted string containing all prompts and responses
         """
-        responses = self.get_latest_responses_by_prompt_names(prompt_names)
         formatted_outputs = []
+        processed_prompts = set()  # To prevent infinite loops
         
-        for prompt_name, content in responses.items():
-            formatted_output = f"<prompt:{content['prompt']}>{content['response']}</prompt:{content['prompt']}>"
+        def process_prompt_chain(prompt_name: str):
+            if prompt_name in processed_prompts:
+                return
             
-            formatted_output_clean = self._clean_text(formatted_output)       
-            formatted_outputs.append(formatted_output_clean)
-            # print(f"Formatted output: {formatted_output_clean}")
+            processed_prompts.add(prompt_name)
+            latest = self.get_latest_interaction_by_prompt_name(prompt_name)
+            
+            if latest:
+                # First process this prompt's history if it exists
+                if latest.history:
+                    for history_prompt in latest.history:
+                        process_prompt_chain(history_prompt)
+                
+                # Then add this prompt's formatted output
+                if latest.prompt and latest.response:
+                    formatted_output = f"<prompt:{latest.prompt}>{latest.response}</prompt:{latest.prompt}>"
+                    formatted_outputs.append(formatted_output)
+        
+        # Process all prompt chains
+        for prompt_name in prompt_names:
+            process_prompt_chain(prompt_name)
         
         return '\n'.join(formatted_outputs)
-
-    def _clean_text(self, text):
-        cleaned_lines = []
-        for line in text.splitlines():
-            # Remove extra spaces within each line
-            cleaned_line = ' '.join(line.split())
-            cleaned_lines.append(cleaned_line)
-        
-        # Join lines back together with newlines
-        return '\n'.join(cleaned_lines)
