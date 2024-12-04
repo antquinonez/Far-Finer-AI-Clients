@@ -30,22 +30,23 @@ class FFAI_AzureOpenAI:
 
     def _build_prompt(self, prompt: str, history: Optional[List[str]] = None) -> str:
         if history:
-
+            # Clean the incoming prompt
             cleaned_prompt = re.sub(r'<RAG>[\s\S]*?</RAG>', '', prompt)
-
+            
+            # Get history and clean any RAG tags from it
             rag = self.ordered_history.get_formatted_responses(history)
-            logger.info(f"RAG: {rag}")
-
+            cleaned_rag = re.sub(r'<RAG>[\s\S]*?</RAG>', '', rag)
+            
             final_prompt = f"""
             <RAG>
-            {rag}
+            {cleaned_rag}
             </RAG>
             ========
             PROMPT
             ========
             {cleaned_prompt}
             """
-
+            
             final_prompt = self._clean_text(final_prompt)
             logger.info(f"final prompt: {final_prompt}")
             return final_prompt
