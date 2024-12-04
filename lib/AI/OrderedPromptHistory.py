@@ -4,6 +4,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 import time
 from datetime import datetime
+import re
 
 @dataclass
 class Interaction:
@@ -130,3 +131,57 @@ class OrderedPromptHistory:
         Useful when prompt was used as the prompt_name
         """
         return self.get_latest_interaction_by_prompt_name(prompt)
+
+    def get_latest_responses_by_prompt_names(self, prompt_names: List[str]) -> Dict[str, Dict[str, str]]:
+        """
+        Get the latest prompt and response for each specified prompt name.
+        
+        Args:
+            prompt_names: List of prompt names to retrieve
+            
+        Returns:
+            Dictionary with prompt names as keys and dictionaries containing 
+            'prompt' and 'response' as values
+        """
+        result = {}
+        for prompt_name in prompt_names:
+            latest_interaction = self.get_latest_interaction_by_prompt_name(prompt_name)
+            if latest_interaction:
+                result[prompt_name] = {
+                    'prompt': latest_interaction.prompt,
+                    'response': latest_interaction.response
+                }
+        return result
+    
+    def get_formatted_responses(self, prompt_names: List[str]) -> str:
+        """
+        Format the latest prompts and responses in the specified format:
+        <prompt:[prompt text]>[response]</prompt:[prompt text]>
+        
+        Args:
+            prompt_names: List of prompt names to include in the formatted output
+            
+        Returns:
+            Formatted string containing all prompts and responses
+        """
+        responses = self.get_latest_responses_by_prompt_names(prompt_names)
+        formatted_outputs = []
+        
+        for prompt_name, content in responses.items():
+            formatted_output = f"<prompt:{content['prompt']}>{content['response']}</prompt:{content['prompt']}>"
+            
+            formatted_output_clean = self._clean_text(formatted_output)       
+            formatted_outputs.append(formatted_output_clean)
+            # print(f"Formatted output: {formatted_output_clean}")
+        
+        return '\n'.join(formatted_outputs)
+
+    def _clean_text(self, text):
+        cleaned_lines = []
+        for line in text.splitlines():
+            # Remove extra spaces within each line
+            cleaned_line = ' '.join(line.split())
+            cleaned_lines.append(cleaned_line)
+        
+        # Join lines back together with newlines
+        return '\n'.join(cleaned_lines)
