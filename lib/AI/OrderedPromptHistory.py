@@ -72,15 +72,15 @@ class OrderedPromptHistory:
         cleaned_prompt = self._clean_text(prompt)
         cleaned_response = self._clean_text(response)
         
-        # Use cleaned prompt text as prompt_name if none provided
-        effective_prompt_name = prompt_name if prompt_name is not None else cleaned_prompt
+        # Use the provided prompt_name if available, otherwise use the cleaned prompt
+        effective_prompt_name = prompt_name if prompt_name else cleaned_prompt
             
         interaction = Interaction(
             sequence_number=self._current_sequence,
             model=model,
             timestamp=time.time(),
-            prompt_name=prompt_name,  # Store original prompt_name (which might be None)
-            prompt=cleaned_prompt,
+            prompt_name=effective_prompt_name,
+            prompt=cleaned_prompt,  # Store the cleaned prompt
             response=cleaned_response,
             history=history  # Store the history chain
         )
@@ -209,6 +209,7 @@ class OrderedPromptHistory:
                 
                 # Then add this prompt's formatted output
                 if latest.prompt and latest.response:
+                    # Use the cleaned prompt text for the tag, not the prompt_name
                     formatted_output = f"<prompt:{latest.prompt}>{latest.response}</prompt:{latest.prompt}>"
                     formatted_outputs.append(formatted_output)
         
