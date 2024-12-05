@@ -15,10 +15,10 @@ This is beta software. Use at your own risk. Watch those tokens!
 ## Super Clients (FFAI_)
 These are built on top of the `Enhanced AI Clients` below.
 
-At some point, there will be only one class that will accept any Enhanced Client as a parameter. The 
+At some point, there will be only one class that will accept any Enhanced Client as a parameter. 
 
 ### Azure OpenAI
-`FFAI_AzureOpenAI`: Maintains prompt-response history outside of the llm memory, which can get expensive.
+`FFAI_AzureOpenAI`: Maintains prompt-response history outside of the llm memory, which can get expensive. Test this with: `try_ai_azureopenai_script.py`
 
 ### Anthropic -- prototype of the Super Clients
 `FFAnthropicCached`:
