@@ -6,6 +6,11 @@ import time
 from datetime import datetime
 import re
 
+import logging
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
 @dataclass
 class Interaction:
     """Represents a single prompt-response interaction"""
@@ -49,7 +54,40 @@ class OrderedPromptHistory:
                 cleaned_lines.append(cleaned_line)
         
         return '\n'.join(cleaned_lines).strip()
+
+    def get_effective_prompt_name(self, prompt_name:Any)->str:
+        logger.debug(f"Running: get_effective_prompt_name()")
+        logger.debug(f"prompt_name: {prompt_name} | type: {type(prompt_name)}")
+
+        if type(prompt_name) == str:
+            # Clean prompt_name
+            cleaned_prompt = self._clean_text(prompt_name)
+
+            logger.debug(f"returning effective_prompt: {cleaned_prompt} | type: str")
+            return cleaned_prompt
+        elif type(prompt_name) == tuple:
+            values = []
     
+            # Iterate through the tuple
+            for item in prompt_name:
+                # Each item is a tuple of (name, dictionary)
+                name, _ = item
+                
+                # Add the name (first element of each inner tuple)
+                values.append(name)
+            
+            # if single element tuple, return value as a str
+            if len(tuple(values)) == 1:
+                simple_value = tuple(values)[0]
+
+                logger.debug(f"returning effective_prompt: {simple_value} | type: {type(simple_value)}")
+                return tuple(values)[0]
+            # return multiple item tuple
+            else:
+                logger.debug(f"returning effective_prompt: {tuple(values)} | type: tuple")
+                return tuple(values)
+
+
     def add_interaction(self, model: str, prompt: str, response: str, 
                        prompt_name: Optional[str] = None, 
                        history: Optional[List[str]] = None) -> Interaction:
@@ -66,46 +104,79 @@ class OrderedPromptHistory:
         Returns:
             The created Interaction object
         """
+        logger.debug("***************************************************************")
+        logger.debug(f"Running: add_interaction()")
+        logger.debug("***************************************************************")
+        logger.debug(f"prompt: {prompt} | type: {type(prompt)}")
+        logger.debug(f"prompt_name: {prompt_name} | type: {type(prompt_name)}")
+        logger.debug(f"history: {history} | type: {type(history)}")
+        logger.debug(f"model: {model} | type: {type(model)}")
+        logger.debug("***************************************************************")
+
+        logger.debug(f"response: {response} | type: {type(response)}")
+
         self._current_sequence += 1
+
         
         # Clean prompt and response before storing
         cleaned_prompt = self._clean_text(prompt)
         cleaned_response = self._clean_text(response)
-        
-        # Use the provided prompt_name if available, otherwise use the cleaned prompt
-        effective_prompt_name = prompt_name if prompt_name else cleaned_prompt
-            
+        logger.debug(f"cleaned_response: {cleaned_response}")
+
+        # GET PROMPT NAME
+        effective_prompt_name = self.get_effective_prompt_name(prompt_name) or cleaned_prompt
+        logger.debug(f"effective_prompt_name: {effective_prompt_name}")
+
+
+
         interaction = Interaction(
             sequence_number=self._current_sequence,
             model=model,
             timestamp=time.time(),
             prompt_name=effective_prompt_name,
-            prompt=cleaned_prompt,  # Store the cleaned prompt
+            prompt=cleaned_prompt,
             response=cleaned_response,
             history=history  # Store the history chain
         )
         
+
         if effective_prompt_name not in self.prompt_dict:
             self.prompt_dict[effective_prompt_name] = []
+
         self.prompt_dict[effective_prompt_name].append(interaction)
         return interaction
 
     def get_interactions_by_prompt_name(self, prompt_name: str) -> List[Interaction]:
         """Get all interactions for a specific prompt name"""
+        logger.debug(f"Getting interactions for prompt_name: {prompt_name}")
+
         return deepcopy(self.prompt_dict.get(prompt_name, []))
     
     def get_latest_interaction_by_prompt_name(self, prompt_name: str) -> Optional[Interaction]:
         """Get the most recent interaction for a specific prompt name"""
+        logger.debug(f"Getting latest interaction for prompt_name: {prompt_name}")
+        
         interactions = self.prompt_dict.get(prompt_name, [])
         return deepcopy(interactions[-1]) if interactions else None
     
     def get_all_prompt_names(self) -> List[str]:
         """Get a list of all prompt names in order of first appearance"""
-        return list(self.prompt_dict.keys())
+        if hasattr(self, 'prompt_dict'):
+            all_prompt_names = self.prompt_dict.keys()
+            logger.debug(f"Returning all prompt names: {all_prompt_names}")
+            return list(all_prompt_names)
+        else:
+            logger.warning("prompt_dict is not initialized")
+            return []  # or handle the error case differently
+
     
     def get_all_interactions(self) -> List[Interaction]:
         """Get all interactions in sequence order"""
+        logger.debug("Getting all interactions")
+        logger.debug(f"Object Prompt dict: {self.prompt_dict}")
+
         all_interactions = []
+
         for interactions in self.prompt_dict.values():
             all_interactions.extend(interactions)
         return sorted(deepcopy(all_interactions), key=lambda x: x.sequence_number)
