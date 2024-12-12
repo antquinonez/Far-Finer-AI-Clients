@@ -1,5 +1,11 @@
 # Copyright (c) 2024 Antonio Quinonez
 # Licensed under the MIT License. See LICENSE in the project root for license information.
+# import sys
+# import os
+
+# sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
+# sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', '..')))
+# sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..', '..', '..')))
 
 from lib.AI.FFAzureOpenAI import FFAzureOpenAI
 

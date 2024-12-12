@@ -1,12 +1,7 @@
 # Copyright (c) 2024 Antonio Quinonez
 # Licensed under the MIT License. See LICENSE in the project root for license information.
-
-import os
 import time
-import logging
 from typing import Optional, List
-from anthropic import Anthropic
-from dotenv import load_dotenv
 from copy import deepcopy
 
 class PermanentHistory:

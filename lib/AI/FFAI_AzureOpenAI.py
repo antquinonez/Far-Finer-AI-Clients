@@ -2,6 +2,7 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime
 import logging
 import time
+import json
 
 from .OrderedPromptHistory import OrderedPromptHistory
 from .PermanentHistory import PermanentHistory
@@ -13,34 +14,72 @@ class FFAI_AzureOpenAI:
     def __init__(self, azure_client):
         logger.info("Initializing FFAIAzure wrapper")
         self.client = azure_client
+        
         self.history = []
-        self.permanent_history = PermanentHistory()
-        self.ordered_history = OrderedPromptHistory()
+        self.clean_history = []
+        self.prompt_attr_history = []
 
-    def _build_prompt(self, prompt: str, history: Optional[List[str]] = None) -> str:
+        self.permanent_history = PermanentHistory()
+
+        self.ordered_history = OrderedPromptHistory()
+        self.clean_ordered_history = OrderedPromptHistory()
+
+        self.named_prompt_ordered_history=OrderedPromptHistory()
+
+    def _clean_response(self, response: str) -> Any:
+        """Process and validate the evaluation response"""
+
+        if response.startswith('```json'):
+            try:
+                json_text = response[response.find('{'):response.rfind('}')+1]
+                cleaned_json_response = json.loads(json_text)
+                
+                return cleaned_json_response
+                
+            except json.JSONDecodeError as e:
+                logger.error(f"Error parsing evaluation response: {str(e)}")
+                raise
+        else:
+            return response
+
+
+    # TODO: Figure out what to do with dependencies, which has data dependencies, if avail, for attribute 
+    def _build_prompt(self, prompt: str, history: Optional[List[str]] = None, dependencies: Optional[Dict] = None) -> str:
         if not history:
             logger.debug("No history provided, returning original prompt")
             return prompt
             
         logger.info(f"Building prompt with history references: {history}")
-        logger.info(f"Current history size: {len(self.history)}")
+        logger.info(f"Current history size: {len(self.prompt_attr_history)}")
         
         # Debug current history
-        for idx, entry in enumerate(self.history):
+        for idx, entry in enumerate(self.prompt_attr_history):
+            logger.debug("==================================================================")
             logger.debug(f"History entry {idx}:")
+            logger.debug("==================================================================")
             logger.debug(f"  Prompt name: {entry.get('prompt_name')}")
+            logger.debug("------------------------------------------------------------------")
             logger.debug(f"  Prompt: {entry.get('prompt')}")
+            logger.debug("------------------------------------------------------------------")
             logger.debug(f"  Response: {entry.get('response')}")
+            # logger.debug("==================================================================")
 
         # Get historical interactions for each prompt name
+        # this is the history that will be passed to the llm based on the information recorded  in self.prompt_attr_history
         history_entries = []
         for prompt_name in history:
-            logger.debug(f"Looking for entries with prompt_name: {prompt_name}")
+            logger.debug("===================================================================================")
+            logger.debug(f"Looking for stored named interactions with prompt_name: {prompt_name}")
             matching_entries = [
-                entry for entry in self.history 
+                entry for entry in self.prompt_attr_history 
                 if entry.get('prompt_name') == prompt_name
             ]
-            logger.debug(f"Found {len(matching_entries)} matching entries")
+
+            if(len(matching_entries)) == 0:
+                logger.warning(f"-- No matching entries for requested prompt_name: {prompt_name}")
+            else:
+                logger.debug(f"-- Found {len(matching_entries)} matching entries")
+
             
             if matching_entries:
                 latest = matching_entries[-1]
@@ -77,49 +116,109 @@ class FFAI_AzureOpenAI:
         logger.info(f"Final constructed prompt:\n{final_prompt}")
         return final_prompt
 
+    #todo: refer to data dependencies needed by prompt as prompt_dependencies
     def generate_response(self,
                          prompt: str,
                          model: Optional[str] = None,
                          prompt_name: Optional[str] = None,
-                         history: Optional[List[str]] = None) -> str:
+                         history: Optional[List[str]] = None,
+                         dependencies: Optional[dict] = None ) -> str:
         """Generate response using Azure OpenAI"""
-        logger.info(f"Generating response for prompt: '{prompt}' with prompt_name: '{prompt_name}'")
+        logger.debug(f"\n===================================================================================")
+        logger.info(f"Generating response for prompt: '{prompt}'")
+        logger.debug(f"Prompt_name: '{prompt_name}'")
+        logger.debug(f"History: {history}") if history else logger.debug("No history provided")
+
         used_model = model if model else self.client.model
 
         try:
             # Build prompt with history
-            final_prompt = self._build_prompt(prompt, history)
+            final_prompt = self._build_prompt(prompt, history, dependencies)
+            logger.debug(f"final_prompt built: {final_prompt}")
+
+            # ==================================================================================
+            # GENERATE RESPONSE USING THE WRAPPED CLIENT
+            # ==================================================================================
+            response = self.client.generate_response(prompt=final_prompt, model=used_model)
+            logger.debug(f"Generated response: {response}")
+
+            # turn response into a dict if a JSON responses.
+            cleaned_response = self._clean_response(response)
+            logger.debug(f"cleaned_response: {cleaned_response}")
             
-            # Generate response
-            response = self.client.generate_response(
-                prompt=final_prompt,
-                model=used_model
-            )
-            
-            # Store interaction
+            # ==================================================================================
+            # ADD TO PERMANENT HISTORY
+            # ==================================================================================
+            # 1) Add user prompt to histories
+            self.permanent_history.add_turn_user(prompt)
+        
+            # 2) Add response to histories
+            self.permanent_history.add_turn_assistant(response)
+
+            # ==================================================================================
+            # RECORDING INTERACTIONS
+            # ==================================================================================
+            logger.debug(f"""Adding interaction:
+                                model: {used_model}
+                                prompt: {prompt}
+                                response: {response}
+                                prompt_name: {prompt_name}
+                                history: {history}
+            """)
+        
+
+            # SELF.HISTORY -- Store interaction to self.history ---------------------------------
             interaction = {
                 'prompt': prompt,
                 'response': response,
                 'prompt_name': prompt_name,
                 'timestamp': time.time(),
-                'model': used_model
+                'model': used_model,
+                'history': history
             }
+
             self.history.append(interaction)
+            logger.debug(f"Added new interaction to self.history: {interaction}")
 
-            logger.debug(f"Added new interaction to history: {interaction}")
-            
-            logger.info("Response generated successfully")
+            # SELF.CLEANED_HISTORY -- CLEANED JSON TO PY DICT -------------------------------------
+            cleaned_interaction = {
+                'prompt': prompt,
+                'response': cleaned_response,
+                'prompt_name': prompt_name,
+                'timestamp': time.time(),
+                'model': used_model,
+                'history': history
+            }
 
-            # ==================================================================================
-            # Add to permanent history
-            self.permanent_history.add_turn_user(prompt)
-            
-            # Generate response using the wrapped client
-            response = self.client.generate_response(prompt=prompt, model=used_model)
-            
-            # Add response to histories
-            self.permanent_history.add_turn_assistant(response)
+            self.clean_history.append(cleaned_interaction)
+            logger.debug(f"Added new interaction to self.clean_history: {cleaned_interaction}")
 
+            # SELF.PROMPT_ATTR_HISTORY ------------------------------------------------------------
+
+            if isinstance(cleaned_response, dict):
+                logger.debug("Response was JSON.")
+                for attr, value in cleaned_response.items():
+                    logger.debug(f"Response has attribute(s). attr: {attr} | value: {value}")
+
+                    attr_interaction = {
+                        'prompt': attr,
+                        'response': value,
+                        'prompt_name': attr,
+                        'timestamp': time.time(),
+                        'model': used_model,
+                        'history': history
+                    }
+
+
+                    self.prompt_attr_history.append(attr_interaction)
+                    logger.debug(f"Added new attr interaction to self.prompt_attr_history: {attr_interaction}")
+            else:
+                self.prompt_attr_history.append(interaction)
+                logger.debug(f"Interaction was not JSON, saving original 'prompt' and 'response' to prompt_attr_history.")
+                logger.debug(f"Added new interaction to self.prompt_attr_history: {interaction}")
+
+            ####################################################################################
+            # ORDERED_HISTORY -- Store interaction to ordered history --------------------------
             self.ordered_history.add_interaction(
                 model=used_model,
                 prompt=prompt,
@@ -139,12 +238,25 @@ class FFAI_AzureOpenAI:
 
     def clear_conversation(self):
         """Clear conversation in client but retain history"""
-        logger.info(f"Clearing conversation. Current history size: {len(self.history)}")
         self.client.clear_conversation()
 
     def get_interaction_history(self) -> List[Dict[str, Any]]:
         """Get complete history"""
         return self.history
+    
+    def get_clean_interaction_history(self) -> List[Dict[str, Any]]:
+        """Get complete history"""
+        return self.clean_history
+    
+    def get_prompt_attr_history(self) -> List[Dict[str, Any]]:
+        """Get prompt_attr_history"""
+        return self.prompt_attr_history
+
+
+    def get_all_interactions(self) -> List[Dict[str, Any]]:
+        """Get all interactions as dictionaries"""
+        return self.ordered_history.get_all_interactions()
+
 
     def get_latest_interaction_by_prompt_name(self, prompt_name: str) -> Optional[Dict[str, Any]]:
         """Get most recent interaction for a prompt name"""
