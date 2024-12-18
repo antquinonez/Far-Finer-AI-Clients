@@ -110,23 +110,25 @@ class FFAzureOpenAI:
         logger.debug(locals())
 
         method_is_o1 = is_o1
+
         # are we using the model and is_o1 from init or the one passed with the generate_response method?
         used_model = model if model else self.model
-
         logger.debug(f"Using model: {used_model}")
 
+        # if init is infer_o1, we use that else what the method call says -- init may set infer_o1 if set at that time
+        infer_o1 = self.infer_o1 or infer_o1
+        logger.debug(f"Using infer_o1: {infer_o1}")
+
         # infer if o1 for method call with model arg
-        if model and infer_o1 == True:
-            logger.debug(f"Using infer_o1 from method call")
-            if 'o1' in model:
+        if infer_o1 == True:
+            if 'o1' in used_model:
                 is_o1 = True
+                logger.debug(f"Inference says model is an o1 model")
             else:
                 is_o1 = False
-
-        elif model and infer_o1 == False and is_o1 == True:
+                logger.debug(f"Inference says model is not an o1 model")
+        elif is_o1 == True:
             logger.debug(f"Using is_o1 == True from method call") 
-        elif model and is_o1 == True:
-            logger.debug(f"Method says model is an o1 model")
         elif model and is_o1 == False:
             logger.debug(f"Method says model is not an o1 model")
         elif model == self.model:
@@ -134,20 +136,16 @@ class FFAzureOpenAI:
             logger.debug(f"Using is_o1 from self.is_o1 since models are the same from init and method call:")
             logger.debug(f"Method call arg is_o1: {method_is_o1}| Init is_o1: {self.is_o1}")
             logger.debug(f"Method model: {model}")
-        elif model != self.model:
-            is_o1 = False
-            logger.debug(f"Method model not init model. Using is_o1 == False")
-            # max_tokens = self._defaults['max_tokens']
         else:
-            is_o1 = self.is_o1
-            logger.debug(f"Other condition. Using is_o1 from self.is_o1: {self.is_o1}")
+            is_o1 = False
+            logger.debug(f"DEFAULT for is_o1 = False")
 
         try:
             self.conversation_history.append({"role": "user", "content": prompt})
             
             messages = [
                 {
-                    "role": "assistant" if self.is_o1 == True else "system",
+                    "role": "assistant" if is_o1 == True else "system",
                     "content": self.system_instructions,
                 },
                 *self.conversation_history
@@ -175,6 +173,7 @@ class FFAzureOpenAI:
             
             logger.info("Response generated successfully")
             return assistant_response
+        
         except Exception as e:
             logger.error("Problem with response generation")
             logger.error(f"  -- exception: {str(e)}")
