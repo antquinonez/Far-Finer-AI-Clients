@@ -1,3 +1,6 @@
+# Copyright (c) 2024 Antonio Quinonez
+# Licensed under the MIT License. See LICENSE in the project root for license information.
+
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import logging
@@ -132,6 +135,11 @@ class FFAI_AzureOpenAI:
 
         used_model = model if model else self.client.model
         logger.debug(f"Using model: {used_model}")
+
+        # dedupe dependencies
+        if dependencies:
+            dependencies_set = set(dependencies)
+            dependencies = list(dependencies_set)
 
         try:
             # Build prompt with history
